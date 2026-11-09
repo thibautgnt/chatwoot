@@ -81,6 +81,7 @@ export function useCopilotReply() {
   const { updateUISettings } = useUISettings();
 
   const showEditor = ref(false);
+  const isAwaitingInstructions = ref(false);
   const isGenerating = ref(false);
   const isContentReady = ref(false);
   const generatedContent = ref('');
@@ -125,6 +126,7 @@ export function useCopilotReply() {
       abortController.value = null;
     }
     showEditor.value = false;
+    isAwaitingInstructions.value = false;
     isGenerating.value = false;
     isContentReady.value = false;
     generatedContent.value = '';
@@ -149,19 +151,24 @@ export function useCopilotReply() {
   }
 
   /**
-   * Executes a copilot action (e.g., improve, fix grammar).
+   * Opens the copilot input so the agent can give optional instructions
+   * before the reply suggestion is generated.
+   */
+  function askForInstructions() {
+    reset(false);
+    isAwaitingInstructions.value = true;
+    showEditor.value = true;
+    // The editor is the first thing the section renders, so its enter transition never fires
+    isContentReady.value = true;
+  }
+
+  /**
+   * Generates content for a copilot action.
    * @param {string} action - The action type
    * @param {string} data - The content to process
+   * @param {string} [instructions] - Agent instructions for a reply suggestion
    */
-  async function execute(action, data) {
-    if (action === 'ask_copilot') {
-      updateUISettings({
-        is_contact_sidebar_open: false,
-        is_copilot_panel_open: true,
-      });
-      return;
-    }
-
+  async function generate(action, data, instructions = undefined) {
     // Reset without tracking dismiss (starting new action)
     reset(false);
     const requestController = new AbortController();
@@ -179,6 +186,7 @@ export function useCopilotReply() {
         errorType,
       } = await processEvent(action, data, {
         signal: requestController.signal,
+        instructions,
       });
 
       if (requestController.signal.aborted) return;
@@ -235,6 +243,39 @@ export function useCopilotReply() {
         abortController.value = null;
       }
     }
+  }
+
+  /**
+   * Executes a copilot action (e.g., improve, fix grammar).
+   * A reply suggestion first asks the agent for optional instructions.
+   * @param {string} action - The action type
+   * @param {string} data - The content to process
+   */
+  async function execute(action, data) {
+    if (action === 'ask_copilot') {
+      updateUISettings({
+        is_contact_sidebar_open: false,
+        is_copilot_panel_open: true,
+      });
+      return;
+    }
+
+    if (action === 'reply_suggestion') {
+      askForInstructions();
+      return;
+    }
+
+    await generate(action, data);
+  }
+
+  /**
+   * Generates the reply suggestion with the instructions the agent typed.
+   * @param {string} instructions - The instructions, empty to generate without any
+   */
+  async function submitInstructions(instructions) {
+    if (!isAwaitingInstructions.value) return;
+
+    await generate('reply_suggestion', '', instructions.trim() || undefined);
   }
 
   /**
@@ -354,6 +395,7 @@ export function useCopilotReply() {
 
   return {
     showEditor,
+    isAwaitingInstructions,
     isGenerating,
     isContentReady,
     generatedContent,
@@ -367,6 +409,7 @@ export function useCopilotReply() {
     toggleEditor,
     setContentReady,
     execute,
+    submitInstructions,
     sendFollowUp,
     accept,
   };

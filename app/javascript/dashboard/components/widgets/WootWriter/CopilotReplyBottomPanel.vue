@@ -9,6 +9,10 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  isAcceptDisabled: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(['submit', 'cancel']);
@@ -44,7 +48,7 @@ const handleSubmit = () => {
       class="bg-n-iris-9 text-white"
       solid
       sm
-      :disabled="isGeneratingContent"
+      :disabled="isGeneratingContent || isAcceptDisabled"
       @click="handleSubmit"
     />
   </div>

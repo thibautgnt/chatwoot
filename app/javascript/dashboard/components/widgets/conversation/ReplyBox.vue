@@ -533,6 +533,12 @@ export default {
     isDefaultEditorMode() {
       return !this.showAudioRecorderEditor && !this.copilot.isActive.value;
     },
+    copilotInputPlaceholder() {
+      if (this.copilot.isAwaitingInstructions.value) {
+        return this.$t('CONVERSATION.FOOTER.COPILOT_INSTRUCTIONS_INPUT');
+      }
+      return this.$t('CONVERSATION.FOOTER.COPILOT_MSG_INPUT');
+    },
     isEditorDisabled() {
       return (
         (this.isAWhatsAppChannel || this.isAPIInbox) &&
@@ -1348,9 +1354,18 @@ export default {
       this.$nextTick(() => this.messageEditor?.focusEditorInputField());
     },
     onSubmitCopilotReply() {
+      // $mod+Enter also reaches the copilot input, which may have just started a generation
+      if (!this.copilot.generatedContent.value) return;
       const acceptedMessage = this.copilot.accept();
       this.message = acceptedMessage;
       this.setCopilotAcceptedMessage(acceptedMessage);
+    },
+    onCopilotSend(message) {
+      if (this.copilot.isAwaitingInstructions.value) {
+        this.copilot.submitInstructions(message);
+      } else {
+        this.copilot.sendFollowUp(message);
+      }
     },
     onInsertWhileCopilotActive(content) {
       if (!this.copilot.isActive.value) return;
@@ -1452,13 +1467,13 @@ export default {
           :show-copilot-editor="copilot.showEditor.value"
           :is-generating-content="copilot.isGenerating.value"
           :generated-content="copilot.generatedContent.value"
-          :placeholder="$t('CONVERSATION.FOOTER.COPILOT_MSG_INPUT')"
+          :placeholder="copilotInputPlaceholder"
           @focus="onFocus"
           @blur="onBlur"
           @clear-selection="clearEditorSelection"
           @close="copilot.showEditor.value = false"
           @content-ready="copilot.setContentReady"
-          @send="copilot.sendFollowUp"
+          @send="onCopilotSend"
         />
         <WootMessageEditor
           v-else-if="!showAudioRecorderEditor"
@@ -1538,6 +1553,7 @@ export default {
         v-if="copilot.isActive.value"
         key="copilot-bottom-panel"
         :is-generating-content="copilot.isButtonDisabled.value"
+        :is-accept-disabled="!copilot.generatedContent.value"
         @submit="onSubmitCopilotReply"
         @cancel="copilot.reset"
       />

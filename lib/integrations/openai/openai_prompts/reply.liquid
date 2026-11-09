@@ -31,6 +31,10 @@ General guidelines:
 - Move the conversation forward
 - Do not invent product details, policies, or links that weren't mentioned
 - Reply in the customer's language
+{% if has_instructions %}
+
+The agent has written instructions for this reply inside <agent_instructions> tags, after the conversation. Follow them: they take precedence over the general guidelines above. Use the facts the agent gives, but do not invent other product details, policies, or links. Write the reply in the customer's language even if the instructions are in another language, unless the agent asks otherwise.
+{% endif %}
 {% if has_search_tool %}
 
 **Important**: You have access to a `search_documentation` tool that can search the company's knowledge base for product details, policies, FAQs, and other information.

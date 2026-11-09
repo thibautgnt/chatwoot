@@ -484,6 +484,37 @@ describe('ReplyBox', () => {
     });
   });
 
+  describe('reply suggestion instructions', () => {
+    it('sends the copilot input as instructions while they are asked for', async () => {
+      const { wrapper } = mountWith({ chat: REPLIABLE });
+      await flushPromises();
+      wrapper.vm.copilot.execute('reply_suggestion');
+      const submitInstructions = vi
+        .spyOn(wrapper.vm.copilot, 'submitInstructions')
+        .mockResolvedValue();
+      const sendFollowUp = vi.spyOn(wrapper.vm.copilot, 'sendFollowUp');
+
+      wrapper.vm.onCopilotSend('Decline politely');
+
+      expect(submitInstructions).toHaveBeenCalledWith('Decline politely');
+      expect(sendFollowUp).not.toHaveBeenCalled();
+      wrapper.unmount();
+    });
+
+    it('keeps the reply when there is no suggestion to accept yet', async () => {
+      const { wrapper } = mountWith({ chat: REPLIABLE });
+      await flushPromises();
+      wrapper.vm.message = 'Hello';
+      wrapper.vm.copilot.execute('reply_suggestion');
+
+      wrapper.vm.onSubmitCopilotReply();
+
+      expect(wrapper.vm.message).toBe('Hello');
+      expect(wrapper.vm.copilot.isAwaitingInstructions.value).toBe(true);
+      wrapper.unmount();
+    });
+  });
+
   describe('inserting content while a Copilot draft is open', () => {
     it('dismisses the draft and appends the text to the reply', async () => {
       const { wrapper } = mountWith({ chat: REPLIABLE });

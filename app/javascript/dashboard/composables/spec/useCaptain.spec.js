@@ -111,11 +111,28 @@ describe('useCaptain', () => {
     const { getReplySuggestion } = useCaptain();
     const result = await getReplySuggestion({});
 
-    expect(TasksAPI.replySuggestion).toHaveBeenCalledWith('123', undefined);
+    expect(TasksAPI.replySuggestion).toHaveBeenCalledWith(
+      { conversationId: '123', instructions: undefined },
+      undefined
+    );
     expect(result).toEqual({
       message: 'Reply suggestion',
       followUpContext: { id: 'ctx3' },
     });
+  });
+
+  it('sends agent instructions with the reply suggestion request', async () => {
+    TasksAPI.replySuggestion.mockResolvedValue({
+      data: { message: 'Reply suggestion' },
+    });
+
+    const { getReplySuggestion } = useCaptain();
+    await getReplySuggestion({ instructions: 'Decline politely' });
+
+    expect(TasksAPI.replySuggestion).toHaveBeenCalledWith(
+      { conversationId: '123', instructions: 'Decline politely' },
+      undefined
+    );
   });
 
   it('sends follow-up message', async () => {

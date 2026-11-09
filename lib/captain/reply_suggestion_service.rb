@@ -1,12 +1,12 @@
 class Captain::ReplySuggestionService < Captain::BaseTaskService
-  pattr_initialize [:account!, :conversation_display_id!, :user!]
+  pattr_initialize [:account!, :conversation_display_id!, :user!, { instructions: nil }]
 
   def perform
     make_api_call(
       feature: 'editor',
       messages: [
         { role: 'system', content: system_prompt },
-        { role: 'user', content: formatted_conversation }
+        { role: 'user', content: user_prompt }
       ]
     )
   end
@@ -22,12 +22,20 @@ class Captain::ReplySuggestionService < Captain::BaseTaskService
     {
       'channel_type' => conversation.inbox.channel_type,
       'agent_name' => user.name,
-      'agent_signature' => user.message_signature.presence
+      'agent_signature' => user.message_signature.presence,
+      'has_instructions' => instructions.present?
     }
   end
 
   def render_liquid_template(template_content, variables = {})
     Liquid::Template.parse(template_content).render(variables)
+  end
+
+  # Kept in the user message so follow-ups, which reuse it as original_context, still honor the instructions
+  def user_prompt
+    return formatted_conversation if instructions.blank?
+
+    "#{formatted_conversation}\n\n<agent_instructions>\n#{instructions}\n</agent_instructions>"
   end
 
   def formatted_conversation

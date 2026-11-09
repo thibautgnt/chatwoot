@@ -52,6 +52,51 @@ RSpec.describe Captain::ReplySuggestionService do
       expect(user_message[:content]).to include('User: I need help')
     end
 
+    context 'without instructions' do
+      it 'sends only the conversation' do
+        service.perform
+
+        user_message = captured_messages.find { |m| m[:role] == 'user' }
+        system_prompt = captured_messages.find { |m| m[:role] == 'system' }[:content]
+        expect(user_message[:content]).not_to include('<agent_instructions>')
+        expect(system_prompt).not_to include('agent_instructions')
+      end
+    end
+
+    context 'with instructions' do
+      subject(:service) do
+        described_class.new(
+          account: account,
+          conversation_display_id: conversation.display_id,
+          user: agent,
+          instructions: 'Tell them the refund arrives within 5 days'
+        )
+      end
+
+      it 'adds the instructions after the conversation' do
+        service.perform
+
+        user_message = captured_messages.find { |m| m[:role] == 'user' }
+        expect(user_message[:content]).to include('User: I need help')
+        expect(user_message[:content]).to end_with(
+          "<agent_instructions>\nTell them the refund arrives within 5 days\n</agent_instructions>"
+        )
+      end
+
+      it 'tells the model to follow them' do
+        service.perform
+
+        system_prompt = captured_messages.find { |m| m[:role] == 'system' }[:content]
+        expect(system_prompt).to include('The agent has written instructions for this reply inside <agent_instructions> tags')
+      end
+
+      it 'keeps the instructions in the follow-up context' do
+        result = service.perform
+
+        expect(result[:follow_up_context][:original_context]).to include('Tell them the refund arrives within 5 days')
+      end
+    end
+
     context 'with chat channel' do
       it 'uses chat-specific instructions' do
         service.perform

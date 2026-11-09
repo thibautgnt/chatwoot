@@ -62,6 +62,19 @@ RSpec.describe 'Captain task conversation access', type: :request do
     expect(response).to have_http_status(:ok)
   end
 
+  it 'passes reply suggestion instructions to the service' do
+    create(:inbox_member, inbox: conversation.inbox, user: agent)
+    service = instance_double(Captain::ReplySuggestionService, perform: { message: 'Allowed result' })
+    expect(Captain::ReplySuggestionService).to receive(:new)
+      .with(hash_including(instructions: 'Decline politely'))
+      .and_return(service)
+    post "/api/v1/accounts/#{account.id}/captain/tasks/reply_suggestion",
+         params: { conversation_display_id: conversation.display_id, instructions: 'Decline politely' },
+         headers: agent.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:ok)
+  end
+
   { rewrite: Captain::RewriteService, follow_up: Captain::FollowUpService }.each do |action, service_class|
     it "allows #{action} without an optional conversation" do
       service = instance_double(service_class, perform: { message: 'Allowed result' })

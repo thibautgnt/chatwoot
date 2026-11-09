@@ -52,15 +52,18 @@ class TasksAPI extends ApiClient {
 
   /**
    * Gets a reply suggestion for a conversation.
-   * @param {string} conversationId - The conversation ID.
+   * @param {Object} options - The reply suggestion options.
+   * @param {string} options.conversationId - The conversation ID.
+   * @param {string} [options.instructions] - Agent instructions for the reply.
    * @param {AbortSignal} [signal] - AbortSignal to cancel the request.
    * @returns {Promise} A promise that resolves with the reply suggestion.
    */
-  replySuggestion(conversationId, signal) {
+  replySuggestion({ conversationId, instructions }, signal) {
     return axios.post(
       `${this.url}/reply_suggestion`,
       {
         conversation_display_id: conversationId,
+        instructions,
       },
       { signal }
     );

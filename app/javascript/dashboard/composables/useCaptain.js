@@ -154,13 +154,17 @@ export function useCaptain() {
   /**
    * Gets a reply suggestion for the current conversation.
    * @param {Object} [options={}] - Additional options.
+   * @param {string} [options.instructions] - Agent instructions for the reply.
    * @param {AbortSignal} [options.signal] - AbortSignal to cancel the request.
    * @returns {Promise<{message: string, followUpContext?: Object}>} The reply suggestion and optional follow-up context.
    */
   const getReplySuggestion = async (options = {}) => {
     try {
       const result = await TasksAPI.replySuggestion(
-        conversationId.value,
+        {
+          conversationId: conversationId.value,
+          instructions: options.instructions,
+        },
         options.signal
       );
       const {
